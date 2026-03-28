@@ -35,14 +35,9 @@ export async function logoutAction() {
   const user = cookieStore.get('tele_user')?.value;
   
   if (user) {
-    try {
-      const client = await getTelegramClient(user);
-      if (client) {
-        await client.invoke(new Api.auth.LogOut());
-      }
-    } catch (e) {
-      console.warn("Failed to natively log out telegram user:", e);
-    }
+    // We only clear the local cookie. 
+    // We DON'T call client.invoke(new Api.auth.LogOut()) because the user 
+    // wants the API to remain active even after logging out of the web UI.
     cookieStore.delete('tele_user');
   }
   
