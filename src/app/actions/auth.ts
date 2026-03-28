@@ -42,7 +42,6 @@ export async function logoutAction() {
     } catch (e) {
       console.warn("Failed to natively log out telegram user:", e);
     }
-    await deleteSession(user);
     cookieStore.delete('tele_user');
   }
   

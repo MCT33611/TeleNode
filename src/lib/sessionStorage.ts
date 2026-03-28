@@ -35,8 +35,15 @@ const getKey = (username: string) => `telenode:user:${username}`;
 export async function saveSession(username: string, data: SessionData): Promise<void> {
   if (!redis) throw new Error("Cloud Database (Redis) not configured.");
   const key = getKey(username);
-  // Store the user profile natively on the cloud
-  await redis.set(key, JSON.stringify(data));
+  
+  // Try to preserve existing folders if we're just updating the session/phone
+  const existing = await getSession(username);
+  const finalData = {
+    ...data,
+    folders: data.folders || existing?.folders || []
+  };
+
+  await redis.set(key, JSON.stringify(finalData));
 }
 
 export async function updateFolders(username: string, folders: Folder[]): Promise<void> {
