@@ -99,13 +99,13 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 flex flex-col pt-4">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-yellow-400">Folders</h2>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
           <Dialog open={isLinkOpen} onOpenChange={setIsLinkOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10">
+              <Button variant="outline" className="flex-1 sm:flex-none border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10">
                 <LinkIcon className="mr-2 h-4 w-4" /> Link Channel
               </Button>
             </DialogTrigger>
@@ -122,10 +122,10 @@ export default function DashboardPage() {
               </div>
             </DialogContent>
           </Dialog>
-
+ 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-yellow-400 text-zinc-950 hover:bg-yellow-500 font-bold shadow-[0_0_10px_rgba(250,204,21,0.3)]">
+              <Button className="flex-1 sm:flex-none bg-yellow-400 text-zinc-950 hover:bg-yellow-500 font-bold shadow-[0_0_10px_rgba(250,204,21,0.3)]">
                 <Plus className="mr-2 h-4 w-4" /> New Folder
               </Button>
             </DialogTrigger>

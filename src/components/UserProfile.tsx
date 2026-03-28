@@ -21,8 +21,8 @@ export default function UserProfile({ username }: { username: string }) {
   };
 
   return (
-    <div className="ml-4 pl-4 border-l border-zinc-700 flex items-center gap-2 text-zinc-400 font-mono text-sm">
-      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-zinc-700 hover:border-yellow-400 transition-colors flex items-center justify-center bg-zinc-900 border-2">
+    <div className="flex items-center gap-2 text-zinc-400 font-mono text-sm ml-0 pl-0 border-l-0 sm:ml-4 sm:pl-4 sm:border-l border-zinc-700">
+      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-zinc-700 hover:border-yellow-400 transition-colors flex items-center justify-center bg-zinc-900 border-2 shrink-0">
         {avatarKey && (
           <img 
             src={`/api/media/${username}/profile?k=${avatarKey}`} 
@@ -38,27 +38,30 @@ export default function UserProfile({ username }: { username: string }) {
         <UserCircle className="w-5 h-5 text-yellow-500 absolute hidden" />
       </div>
       
-      <button 
-        onClick={copyToClipboard} 
-        className="p-1 hover:bg-yellow-400/10 rounded transition-colors group"
-        title="Copy Username"
-      >
-        {copied ? (
-          <Check className="w-4 h-4 text-green-500" />
-        ) : (
-          <Copy className="w-3.5 h-3.5 text-zinc-500 group-hover:text-yellow-400" />
-        )}
-      </button>
-      {username}
+      <div className="hidden sm:flex items-center gap-2">
+        <button 
+          onClick={copyToClipboard} 
+          className="p-1 hover:bg-yellow-400/10 rounded transition-colors group"
+          title="Copy Username"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-500" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-zinc-500 group-hover:text-yellow-400" />
+          )}
+        </button>
+        <span className="truncate max-w-[120px]">{username}</span>
+      </div>
+
       <button 
         onClick={async () => {
           await logoutAction();
           router.push('/login');
         }} 
-        className="ml-1 p-1 hover:bg-red-500/10 rounded transition-colors group"
+        className="p-1 hover:bg-red-500/10 rounded transition-colors group"
         title="Disconnect Session"
       >
-        <LogOut className="w-3.5 h-3.5 text-zinc-600 group-hover:text-red-400" />
+        <LogOut className="w-4 h-4 text-zinc-600 group-hover:text-red-400" />
       </button>
     </div>
   );

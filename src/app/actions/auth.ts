@@ -21,7 +21,8 @@ export async function signInAction(phone: string, code: string, username: string
     cookies().set('tele_user', username, { 
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production',
-      path: '/'
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30 // 30 days
     });
     return { success: true };
   } catch (e: any) {

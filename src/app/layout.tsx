@@ -21,15 +21,21 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} min-h-screen flex flex-col items-center bg-zinc-950`}>
-        <header className="w-full max-w-5xl px-6 py-4 flex items-center justify-between border-b border-zinc-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-yellow-400 flex items-center justify-center font-bold text-zinc-950 text-xl shadow-[0_0_15px_rgba(250,204,21,0.5)]">
-              TN
+        <header className="w-full max-w-5xl px-6 py-4 border-b border-zinc-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              <div className="w-10 h-10 rounded-lg bg-yellow-400 flex items-center justify-center font-bold text-zinc-950 text-xl shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                TN
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-200">
+                Tele<span className="text-yellow-400">Node</span>
+              </h1>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-200">
-              Tele<span className="text-yellow-400">Node</span>
-            </h1>
-            {username && <UserProfile username={username} />}
+            {username && (
+              <div className="w-full sm:w-auto flex justify-end">
+                <UserProfile username={username} />
+              </div>
+            )}
           </div>
         </header>
         <main className="w-full max-w-5xl px-6 py-8 flex-1 flex flex-col">

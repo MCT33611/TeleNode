@@ -281,21 +281,21 @@ export default function FolderPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col pt-4">
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" className="hover:text-yellow-400" asChild>
+    <div className="flex-1 flex flex-col pt-2 sm:pt-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" className="hover:text-yellow-400 shrink-0" asChild>
             <Link href="/dashboard">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
           
-          <div className="relative group cursor-pointer inline-block">
+          <div className="relative group cursor-pointer shrink-0">
             {username && avatarKey && (
               <img 
                 src={`/api/media/${username}/avatar/${folderId}?v=${avatarKey}`} 
                 alt="Folder Avatar"
-                className="w-12 h-12 rounded-full border border-yellow-400/30 object-cover"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-yellow-400/30 object-cover"
                 onError={(e) => { e.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' }}
               />
             )}
@@ -304,13 +304,13 @@ export default function FolderPage() {
             </div>
             <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
           </div>
-
-          <h2 className="text-3xl font-bold tracking-tight text-yellow-400">{folderName}</h2>
+ 
+          <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-yellow-400 truncate flex-1">{folderName}</h2>
         </div>
         
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-yellow-400 text-zinc-950 font-bold hover:bg-yellow-500 shadow-[0_0_10px_rgba(250,204,21,0.3)]">
+            <Button className="w-full sm:w-auto bg-yellow-400 text-zinc-950 font-bold hover:bg-yellow-500 shadow-[0_0_10px_rgba(250,204,21,0.3)]">
               <Plus className="mr-2 h-4 w-4" /> Add Record
             </Button>
           </DialogTrigger>
