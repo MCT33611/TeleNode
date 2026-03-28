@@ -7,125 +7,126 @@ import { CustomFile } from 'telegram/client/uploads';
 import { getSession } from '@/lib/sessionStorage';
 
 export async function getRecordsAction(channelId: string) {
-  try {
-    const username = cookies().get('tele_user')?.value;
-    if (!username) throw new Error('Not authenticated');
+  const cookieStore = cookies();
+  const username = cookieStore.get('tele_user')?.value;
+  if (!username) return { success: false, error: 'Unauthorized' };
 
-    const client = await getTelegramClient(username);
-    if (!client) throw new Error('Client not initialized');
+  let retryCount = 0;
+  while (retryCount < 2) {
+    try {
+      const client = await getTelegramClient(username);
+      if (!client) return { success: false, error: 'Client not initialized' };
 
-    const entity = await resolveChannel(client, channelId);
-    const messages = await client.getMessages(entity, { limit: 100 });
-    
-    const session = await getSession(username);
-    const folder = session?.folders?.find(f => f.id === channelId);
+      const entity = await resolveChannel(client, channelId);
+      const messages = await client.getMessages(entity, { limit: 100 });
+      
+      const session = await getSession(username);
+      const folder = session?.folders?.find(f => f.id === channelId);
 
-    // Filter out purely service messages (like channel creation)
-    const validMessages = messages.filter(msg => !!msg.media || (msg.message && msg.message.trim().length > 0));
+      // Filter out purely service messages
+      const validMessages = messages.filter(msg => !!msg.media || (msg.message && msg.message.trim().length > 0));
 
-    const grouped = new Map();
-    const results: any[] = [];
+      const grouped = new Map();
+      const results: any[] = [];
 
-    validMessages.forEach(msg => {
-      const parsedData = parseCaptionData(msg);
-      const mediaUrl = msg.media ? `/api/media/${username}/${channelId}/${msg.id}` : null;
-      let fileName = 'file';
-      let mimeType = 'application/octet-stream';
+      validMessages.forEach(msg => {
+        const parsedData = parseCaptionData(msg);
+        const mediaUrl = msg.media ? `/api/media/${username}/${channelId}/${msg.id}` : null;
+        let fileName = 'file';
+        let mimeType = 'application/octet-stream';
 
-      if (msg.media instanceof Api.MessageMediaPhoto) {
-        fileName = `photo_${msg.id}.jpg`;
-        mimeType = 'image/jpeg';
-      } else if (msg.media instanceof Api.MessageMediaDocument && msg.media.document instanceof Api.Document) {
-        mimeType = msg.media.document.mimeType;
-        const fileAttr = msg.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename) as Api.DocumentAttributeFilename | undefined;
-        if (fileAttr) fileName = fileAttr.fileName;
-        else fileName = `document_${msg.id}`;
-      }
+        if (msg.media instanceof Api.MessageMediaPhoto) {
+          fileName = `photo_${msg.id}.jpg`;
+          mimeType = 'image/jpeg';
+        } else if (msg.media instanceof Api.MessageMediaDocument && msg.media.document instanceof Api.Document) {
+          mimeType = msg.media.document.mimeType;
+          const fileAttr = msg.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename) as Api.DocumentAttributeFilename | undefined;
+          if (fileAttr) fileName = fileAttr.fileName;
+          else fileName = `document_${msg.id}`;
+        }
 
-      const mediaItem = mediaUrl ? { msgId: msg.id, url: mediaUrl, fileName, mimeType } : null;
+        const mediaItem = mediaUrl ? { msgId: msg.id, url: mediaUrl, fileName, mimeType } : null;
 
-      if (msg.groupedId) {
-        const gid = msg.groupedId.toString();
-        if (!grouped.has(gid)) {
-          grouped.set(gid, {
-            id: msg.id, // Primary rendering key (highest msg id or lowest msg id)
-            msgIds: [], 
+        if (msg.groupedId) {
+          const gid = msg.groupedId.toString();
+          if (!grouped.has(gid)) {
+            grouped.set(gid, {
+              id: msg.id,
+              msgIds: [], 
+              date: msg.date,
+              mediaUrls: [],
+              mediaItems: [], 
+              captionMsgId: null, 
+              data: {},
+              hasMedia: false
+            });
+          }
+          
+          const group = grouped.get(gid);
+          group.msgIds.push(msg.id);
+          
+          if (mediaUrl) {
+            group.mediaUrls.push(mediaUrl);
+            group.mediaItems.push(mediaItem);
+            group.hasMedia = true;
+          }
+
+          if (Object.keys(parsedData).length > 0) {
+            group.data = parsedData;
+            group.captionMsgId = msg.id; 
+          }
+          if (!group.captionMsgId) group.captionMsgId = msg.id; 
+        } else {
+          results.push({
+            id: msg.id,
+            captionMsgId: msg.id,
+            msgIds: [msg.id],
             date: msg.date,
-            mediaUrls: [],
-            mediaItems: [], // Struct for inline editing deletes
-            captionMsgId: null, // Critical lock target for JSON mutation 
-            data: {},
-            hasMedia: false
+            mediaUrls: mediaUrl ? [mediaUrl] : [],
+            mediaItems: mediaItem ? [mediaItem] : [],
+            data: parsedData,
+            hasMedia: !!msg.media
           });
         }
-        
-        const group = grouped.get(gid);
-        group.msgIds.push(msg.id);
-        
-        if (mediaUrl) {
-           group.mediaUrls.push(mediaUrl);
-           group.mediaItems.push(mediaItem);
-           group.hasMedia = true;
+      });
+
+      const finalResults = Array.from(grouped.values()).concat(results).map(record => {
+        if (record.data && Array.isArray(record.data.mediaOrder) && record.mediaItems.length > 0) {
+          const order = record.data.mediaOrder as number[];
+          const itemMap = new Map(record.mediaItems.map((item: any) => [item.msgId, item]));
+          const sortedItems: any[] = [];
+          order.forEach(id => {
+            if (itemMap.has(id)) {
+              sortedItems.push(itemMap.get(id));
+              itemMap.delete(id);
+            }
+          });
+          sortedItems.push(...Array.from(itemMap.values()));
+          return {
+            ...record,
+            mediaItems: sortedItems,
+            mediaUrls: sortedItems.map(item => item.url)
+          };
         }
+        return record;
+      });
 
-        // The caption/JSON usually sits on one of the grouped messages.
-        if (Object.keys(parsedData).length > 0) {
-           group.data = parsedData;
-           group.captionMsgId = msg.id; 
-        }
-        
-        if (!group.captionMsgId) group.captionMsgId = msg.id; 
+      finalResults.sort((a, b) => b.id - a.id);
 
-      } else {
-         // Free standing record
-         results.push({
-           id: msg.id,
-           captionMsgId: msg.id,
-           msgIds: [msg.id],
-           date: msg.date,
-           mediaUrls: mediaUrl ? [mediaUrl] : [],
-           mediaItems: mediaItem ? [mediaItem] : [],
-           data: parsedData,
-           hasMedia: !!msg.media
-         });
+      return { success: true, records: finalResults, folderName: folder?.name || 'Folder', username };
+    } catch (e: any) {
+      const isDuplicate = e.errorMessage === 'AUTH_KEY_DUPLICATED' || (e.message && e.message.includes('406'));
+      if (isDuplicate && retryCount === 0) {
+        retryCount++;
+        const { clientsCache } = await import('@/lib/authServer');
+        clientsCache.delete(username);
+        continue;
       }
-    });
-
-    // Process the results to apply any custom media order from JSON metadata
-    const finalResults = Array.from(grouped.values()).concat(results).map(record => {
-      if (record.data && Array.isArray(record.data.mediaOrder) && record.mediaItems.length > 0) {
-        const order = record.data.mediaOrder as number[];
-        // Create a map for quick lookup of items by msgId
-        const itemMap = new Map(record.mediaItems.map((item: any) => [item.msgId, item]));
-        
-        const sortedItems: any[] = [];
-        // Add items in the specified order if they exist
-        order.forEach(id => {
-          if (itemMap.has(id)) {
-            sortedItems.push(itemMap.get(id));
-            itemMap.delete(id);
-          }
-        });
-        // Append any items that weren't in the order array (e.g. newly added)
-        sortedItems.push(...Array.from(itemMap.values()));
-        
-        return {
-          ...record,
-          mediaItems: sortedItems,
-          mediaUrls: sortedItems.map(item => item.url)
-        };
-      }
-      return record;
-    });
-
-    // Sort final sequence descending by Date or ID
-    finalResults.sort((a, b) => b.id - a.id);
-
-    return { success: true, records: finalResults, folderName: folder?.name || 'Unknown Folder', username };
-  } catch (e: any) {
-    console.error(e);
-    return { success: false, error: e.message };
+      console.error(e);
+      return { success: false, error: e.message };
+    }
   }
+  return { success: false, error: 'Failed after connection retries' };
 }
 
 export async function createRecordAction(channelId: string, formData: FormData) {

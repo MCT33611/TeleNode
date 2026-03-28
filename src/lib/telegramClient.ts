@@ -30,11 +30,12 @@ export async function getTelegramClient(username: string): Promise<TelegramClien
         if (!sessionData) return null;
 
         const stringSession = new StringSession(sessionData.sessionString);
+        const instanceId = Math.random().toString(36).substring(7);
         const client = new TelegramClient(stringSession, sessionData.apiId, sessionData.apiHash, {
           connectionRetries: 5,
           autoReconnect: true,
-          useWSS: true, // Use WebSockets for better stability in cloud/proxy environments
-          deviceModel: `TeleNode-${process.env.NODE_ENV === 'production' ? 'Cloud' : 'Local'}`,
+          useWSS: true, 
+          deviceModel: `TeleNode-${process.env.NODE_ENV === 'production' ? 'Cloud' : 'Local'}-${instanceId}`,
           systemVersion: '1.0.0',
         });
 
