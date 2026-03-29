@@ -407,8 +407,8 @@ export default function FolderPage() {
                     <div className="text-xs text-zinc-500 mb-2">
                        {new Date(record.date * 1000).toLocaleString()}
                     </div>
-                    <div className="bg-zinc-950 p-3 rounded text-xs font-mono text-zinc-400 overflow-auto max-h-32">
-                      <pre>{JSON.stringify(record.data, null, 2)}</pre>
+                    <div className="bg-zinc-950 p-3 rounded text-xs font-mono text-zinc-400 overflow-auto max-h-48 border border-zinc-800/50">
+                      <pre className="whitespace-pre-wrap break-all">{JSON.stringify(record.data, null, 2)}</pre>
                     </div>
                   </CardHeader>
                   <CardFooter className="p-4 pt-0 justify-end gap-2 flex-wrap">

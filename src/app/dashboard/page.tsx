@@ -30,12 +30,16 @@ export default function DashboardPage() {
   const [renamingFolderId, setRenamingFolderId] = useState('');
   const [renameValue, setRenameValue] = useState('');
 
+  const [username, setUsername] = useState('');
+  const [avatarKey, setAvatarKey] = useState(() => Date.now().toString());
+
   useEffect(() => {
     getFoldersAction()
       .then(res => {
         setLoading(false);
         if (res.success && res.folders) {
           setFolders(res.folders);
+          if (res.username) setUsername(res.username);
         } else {
           router.push('/login');
         }
@@ -71,15 +75,16 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (hard: boolean = false) => {
     if (!deletingFolderId) return;
     setActionLoading(true);
-    const res = await deleteFolderAction(deletingFolderId);
-    setActionLoading(false);
+    const res = await deleteFolderAction(deletingFolderId, hard);
     if (res.success) {
       setFolders(prev => prev.filter(f => f.id !== deletingFolderId));
       setDeletingFolderId('');
+      setActionLoading(false);
     } else {
+      setActionLoading(false);
       alert("Failed to delete folder: " + res.error);
     }
   };
@@ -168,9 +173,20 @@ export default function DashboardPage() {
                     <button onClick={(e) => { e.stopPropagation(); setRenameValue(folder.name); setRenamingFolderId(folder.id); }} className="p-1 px-2 text-zinc-500 hover:text-yellow-400 transition-colors rounded hover:bg-zinc-800"><Edit className="w-4 h-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); setDeletingFolderId(folder.id); }} className="p-1 px-2 text-zinc-500 hover:text-red-500 transition-colors rounded hover:bg-zinc-800"><Trash2 className="w-4 h-4" /></button>
                   </div>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Folder className="h-5 w-5 text-yellow-400" />
-                    {folder.name}
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full border border-yellow-400/30 overflow-hidden flex items-center justify-center bg-zinc-950 shrink-0">
+                      {username && (
+                        <img 
+                          src={`/api/media/${username}/avatar/${folder.id}?v=${avatarKey}`} 
+                          alt={folder.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                             (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder h-5 w-5 text-yellow-400"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
+                          }}
+                        />
+                      )}
+                    </div>
+                    <span className="truncate">{folder.name}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardFooter className="mt-auto">
@@ -190,20 +206,41 @@ export default function DashboardPage() {
       
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deletingFolderId} onOpenChange={(open) => !open && setDeletingFolderId('')}>
-        <DialogContent className="bg-zinc-900 border-red-500/50">
+        <DialogContent className="bg-zinc-900 border-yellow-400/50">
           <DialogHeader>
-            <DialogTitle className="text-red-500">Delete Folder</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-red-500">
+               Delete Folder: {folders.find(f => f.id === deletingFolderId)?.name || '...'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4 text-zinc-300">
-            <p>Are you absolutely sure?</p>
-            <p className="text-xs text-zinc-500 bg-red-500/10 p-2 rounded border border-red-500/20">
-              WARNING: This is a <b>HARD DELETE</b>. This action will completely and irreversibly destroy the underlying Telegram Channel and all media inside it!
-            </p>
-            <div className="flex justify-end gap-3 mt-4">
+          <div className="space-y-6 pt-4 text-zinc-300">
+            <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-sm">
+              Are you sure you want to remove this folder from TeleNode? 
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+               <Button 
+                 variant="outline" 
+                 className="w-full flex flex-col items-start h-auto p-4 gap-1 hover:bg-yellow-400/10 border-yellow-400/20 whitespace-normal text-left"
+                 onClick={() => handleDelete(false)}
+                 disabled={actionLoading}
+               >
+                  <span className="font-bold text-yellow-400">Option 1: Soft Delete (Unlink)</span>
+                  <span className="text-xs text-zinc-500 leading-relaxed">Only removes it from this dashboard. Local copies are cleared, but your Telegram Channel stays active.</span>
+               </Button>
+
+               <Button 
+                 variant="destructive" 
+                 className="w-full flex flex-col items-start h-auto p-4 gap-1 bg-red-500/10 hover:bg-red-500/20 border-red-500/20 border whitespace-normal text-left"
+                 onClick={() => handleDelete(true)}
+                 disabled={actionLoading}
+               >
+                  <span className="font-bold text-red-500">Option 2: Hard Delete (Destroy Channel)</span>
+                  <span className="text-xs text-red-400/60 font-mono leading-relaxed">WARNING: This will IRREVERSIBLY destroy the underlying Telegram Channel and all files inside it!</span>
+               </Button>
+            </div>
+
+            <div className="flex justify-end mt-2">
               <Button variant="ghost" className="hover:bg-zinc-800" onClick={() => setDeletingFolderId('')} disabled={actionLoading}>Cancel</Button>
-              <Button variant="destructive" className="bg-red-500 hover:bg-red-600 font-bold" onClick={handleDelete} disabled={actionLoading}>
-                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes, Delete Channel'}
-              </Button>
             </div>
           </div>
         </DialogContent>

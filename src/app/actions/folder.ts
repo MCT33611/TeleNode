@@ -78,30 +78,31 @@ export async function linkFolderAction(idOrUsername: string, name: string) {
 
 export async function getFoldersAction() {
   const username = cookies().get('tele_user')?.value;
-  if (!username) return { success: false, error: 'Not authenticated', folders: [] };
+  if (!username) return { success: false, error: 'Not authenticated', folders: [], username: '' };
 
   const session = await getSession(username);
-  return { success: true, folders: session?.folders || [] };
+  return { success: true, folders: session?.folders || [], username };
 }
 
-export async function deleteFolderAction(channelId: string) {
+export async function deleteFolderAction(channelId: string, hardDelete: boolean = false) {
   try {
     const username = cookies().get('tele_user')?.value;
     if (!username) throw new Error('Not authenticated');
 
-    const client = await getTelegramClient(username);
-    if (!client) throw new Error('Client not initialized');
+    if (hardDelete) {
+      const client = await getTelegramClient(username);
+      if (!client) throw new Error('Client not initialized');
+      const entity = await resolveChannel(client, channelId);
+      
+      // Hard delete the channel on Telegram natively
+      await client.invoke(
+        new Api.channels.DeleteChannel({
+          channel: entity
+        })
+      );
+    }
 
-    const entity = await resolveChannel(client, channelId);
-    
-    // Hard delete the channel on Telegram
-    await client.invoke(
-      new Api.channels.DeleteChannel({
-        channel: entity
-      })
-    );
-
-    // Remove from local mapping
+    // Always remove from local Redis mapping regardless of soft/hard choice
     const session = await getSession(username);
     if (session) {
       session.folders = (session.folders || []).filter(f => f.id !== channelId);
