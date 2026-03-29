@@ -17,7 +17,28 @@ export async function sendCodeAction(phone: string, apiId: number, apiHash: stri
 
 export async function signInAction(phone: string, code: string, username: string) {
   try {
-    await signIn(phone, code, username);
+    const res = await signIn(phone, code, username);
+    if (res === "2FA_REQUIRED") {
+      return { success: false, requiresPassword: true };
+    }
+    
+    cookies().set('tele_user', username, { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30 // 30 days
+    });
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function checkPasswordAction(phone: string, password: string, username: string) {
+  try {
+    const signIn = await import('@/lib/authServer');
+    await signIn.checkPassword(phone, password, username);
+
     cookies().set('tele_user', username, { 
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production',

@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { sendCodeAction, signInAction } from '@/app/actions/auth';
+import { sendCodeAction, signInAction, checkPasswordAction } from '@/app/actions/auth';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<'credentials' | 'code'>('credentials');
+  const [step, setStep] = useState<'credentials' | 'code' | 'password'>('credentials');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [apiHash, setApiHash] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +57,29 @@ export default function LoginPage() {
 
     if (res.success) {
       router.push('/dashboard');
+    } else if (res.requiresPassword) {
+      setStep('password');
     } else {
       setError(res.error || 'Failed to sign in');
+    }
+  };
+
+  const handleVerifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!password) {
+      setError('Please enter your 2FA password');
+      return;
+    }
+
+    setLoading(true);
+    const res = await checkPasswordAction(phone, password, username);
+    setLoading(false);
+
+    if (res.success) {
+      router.push('/dashboard');
+    } else {
+      setError(res.error || 'Incorrect password');
     }
   };
 
@@ -75,7 +97,9 @@ export default function LoginPage() {
               Connect Telegram
             </CardTitle>
             <CardDescription className="text-center text-zinc-400">
-              {step === 'credentials' ? 'Enter API details from my.telegram.org' : 'Enter the OTP code sent to your Telegram app'}
+              {step === 'credentials' ? 'Enter API details from my.telegram.org' : 
+               step === 'code' ? 'Enter the OTP code sent to your Telegram app' : 
+               'Two-Factor Authentication: Enter your cloud password'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -85,7 +109,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {step === 'credentials' ? (
+            {step === 'credentials' && (
               <form id="creds-form" onSubmit={handleSendCode} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="username">Username (Profile Alias)</Label>
@@ -104,7 +128,9 @@ export default function LoginPage() {
                   <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1234567890" className="bg-zinc-950 border-zinc-800" />
                 </div>
               </form>
-            ) : (
+            )}
+
+            {step === 'code' && (
               <form id="code-form" onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="code">OTP Code</Label>
@@ -112,11 +138,20 @@ export default function LoginPage() {
                 </div>
               </form>
             )}
+
+            {step === 'password' && (
+              <form id="password-form" onSubmit={handleVerifyPassword} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">2FA Password</Label>
+                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your cloud password" className="bg-zinc-950 border-zinc-800" />
+                </div>
+              </form>
+            )}
           </CardContent>
           <CardFooter>
             <Button 
               type="submit" 
-              form={step === 'credentials' ? 'creds-form' : 'code-form'} 
+              form={step === 'credentials' ? 'creds-form' : step === 'code' ? 'code-form' : 'password-form'} 
               disabled={loading}
               className="w-full bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-semibold"
             >
